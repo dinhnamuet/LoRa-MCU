@@ -37,52 +37,52 @@
 #define RegVersion							0x42
 
 typedef enum {
-    SLEEP_MODE,
-    STANDBY_MODE,
-    FSTX,
-    TRANSMIT_MODE,
-    FSRX,
-    RXCONTINUOUS_MODE,
-    RXSINGLE_MODE,
-    CAD_MODE
+	SLEEP_MODE,
+	STANDBY_MODE,
+	FSTX,
+	TRANSMIT_MODE,
+	FSRX,
+	RXCONTINUOUS_MODE,
+	RXSINGLE_MODE,
+	CAD_MODE
 } lora_mode_t; /* lora operation mode  */
 
 /*lora signal bandwidth */
 typedef enum {
-    BW_7_8_KHZ,
-    BW_10_4_KHZ,
-    BW_15_6_KHZ,
-    BW_20_8_KHZ,
-    BW_31_25_KHZ,
-    BW_41_7_KHZ,
-    BW_62_5_KHZ,
-    BW_125_KHZ,
-    BW_250_KHZ,
-    BW_500_KHZ
+	BW_7_8_KHZ,
+	BW_10_4_KHZ,
+	BW_15_6_KHZ,
+	BW_20_8_KHZ,
+	BW_31_25_KHZ,
+	BW_41_7_KHZ,
+	BW_62_5_KHZ,
+	BW_125_KHZ,
+	BW_250_KHZ,
+	BW_500_KHZ
 } bandwidth_t;
 
 typedef enum {
-    CR_4_5 = 1,
-    CR_4_6,
-    CR_4_7,
-    CR_4_8
+	CR_4_5 = 1,
+	CR_4_6,
+	CR_4_7,
+	CR_4_8
 } codingrate_t; /* lora codingrate  */
 
 typedef enum {
-    SF_6 = 6,
-    SF_7,
-    SF_8,
-    SF_9,
-    SF_10,
-    SF_11,
-    SF_12
+	SF_6 = 6,
+	SF_7,
+	SF_8,
+	SF_9,
+	SF_10,
+	SF_11,
+	SF_12
 } SF_t; /* lora spreadingFactor */
 
 typedef enum {
-    LORA_OK             = 200,
-    LORA_NOT_FOUND      = 404,
-    LORA_LARGE_PAYLOAD  = 413,
-    LORA_UNAVAILABLE    = 503
+	LORA_OK             = 200,
+	LORA_NOT_FOUND      = 404,
+	LORA_LARGE_PAYLOAD  = 413,
+	LORA_UNAVAILABLE    = 503
 } status_t; /* lora status */
 
 typedef enum {
@@ -93,10 +93,10 @@ typedef enum {
 } lora_err_t;
 
 typedef enum {
-    POWER_11_DB = 0xF6,
-    POWER_14_DB = 0xF9,
-    POWER_17_DB = 0xFC,
-    POWER_20_DB = 0xFF
+	POWER_11_DB = 0xF6,
+	POWER_14_DB = 0xF9,
+	POWER_17_DB = 0xFC,
+	POWER_20_DB = 0xFF
 } power_t; /* lora power gain */
 
 #pragma pack(1)
@@ -110,9 +110,9 @@ struct lora_dev {
 	u16 preamble;
 	power_t power;
 	u8 overCurrentProtection;
-    lora_mode_t current_mode;
+	lora_mode_t current_mode;
 
-    /* LoRa Hardware defined */
+	/* LoRa Hardware defined */
 	SPI_HandleTypeDef *spi;
 	GPIO_TypeDef *cs_port;
 	GPIO_TypeDef *rst_port;
@@ -122,9 +122,9 @@ struct lora_dev {
 	IRQn_Type dio0_irq_number;
 
 	/* LoRa buffer and callback */
-    u8 *rx_buf;
-    u32 rx_buf_size;
-    void (*receive_buf)(struct lora_dev *sx1278, u8 *buf, u32 size);
+	u8 *rx_buf;
+	u32 rx_buf_size;
+	void (*receive_buf)(struct lora_dev *sx1278, u8 *buf, u32 size);
 };
 
 #pragma pack()
