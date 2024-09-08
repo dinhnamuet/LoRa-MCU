@@ -2,6 +2,13 @@
 #include <string.h>
 #include <stdlib.h>
 
+/**
+  * @brief  Transmit an amount of data in blocking mode.
+  * @param  sx1278 lora device instance
+  * @param	buf data to write
+  * @param	len data length
+  * @retval HAL status
+  */
 static HAL_StatusTypeDef spi_lora_write(struct lora_dev *sx1278, u8 *buf, u32 len) {
 	HAL_StatusTypeDef res;
 	HAL_GPIO_WritePin(sx1278->cs_port, sx1278->cs_pin, GPIO_PIN_RESET);
@@ -9,6 +16,15 @@ static HAL_StatusTypeDef spi_lora_write(struct lora_dev *sx1278, u8 *buf, u32 le
 	HAL_GPIO_WritePin(sx1278->cs_port, sx1278->cs_pin, GPIO_PIN_SET);
 	return res;
 }
+/**
+  * @brief  Transmit then Receive an amount of data in blocking mode.
+  * @param  sx1278 lora device instance
+  * @param	tx_buf data to write
+  * @param	tx_len data write size
+  * @param	rx_buf buffer to get data
+  * @param	rx_len data length
+  * @retval HAL status
+  */
 static HAL_StatusTypeDef spi_lora_write_then_read(struct lora_dev *sx1278, u8 *tx_buf, u32 tx_len, u8 *rx_buf, u32 rx_len) {
 	HAL_StatusTypeDef res;
 	HAL_GPIO_WritePin(sx1278->cs_port, sx1278->cs_pin, GPIO_PIN_RESET);
@@ -21,12 +37,25 @@ end_of_transmit:
 	HAL_GPIO_WritePin(sx1278->cs_port, sx1278->cs_pin, GPIO_PIN_SET);
 	return res;
 }
+/**
+  * @brief  Write sx1278 register.
+  * @param  sx1278 lora device instance
+  * @param	address register address
+  * @param	value data to write
+  * @retval HAL status
+  */
 HAL_StatusTypeDef lora_write_reg(struct lora_dev *sx1278, u8 address, u8 value) {
 	u8 to_send[2];
 	to_send[0] = address | (1 << 7);
 	to_send[1] = value;
 	return spi_lora_write(sx1278, to_send, 2);
 }
+/**
+  * @brief  Read sx1278 register.
+  * @param  sx1278 lora device instance
+  * @param	address register address
+  * @retval register value
+  */
 u8 lora_read_reg(struct lora_dev *sx1278, u8 address) {
 	u8 readData;
 	u8 addr;
@@ -34,12 +63,23 @@ u8 lora_read_reg(struct lora_dev *sx1278, u8 address) {
 	spi_lora_write_then_read(sx1278, &addr, 1, &readData, 1);
 	return readData;
 }
+/**
+  * @brief  Reset sx1278.
+  * @param  sx1278 lora device instance
+  * @retval none
+  */
 void lora_reset(struct lora_dev *sx1278) {
 	HAL_GPIO_WritePin(sx1278->rst_port, sx1278->rst_pin, GPIO_PIN_RESET);
 	HAL_Delay(1000);
 	HAL_GPIO_WritePin(sx1278->rst_port, sx1278->rst_pin, GPIO_PIN_SET);
 	HAL_Delay(100);
 }
+/**
+  * @brief  Switch to lora mode.
+  * @param  sx1278 lora device instance
+  * @param	mode target mode
+  * @retval HAL status
+  */
 HAL_StatusTypeDef lora_goto_mode(struct lora_dev *sx1278, lora_mode_t mode) {
 	u8 read, data;
 	read = lora_read_reg(sx1278, RegOpMode);
@@ -58,6 +98,12 @@ HAL_StatusTypeDef lora_goto_mode(struct lora_dev *sx1278, lora_mode_t mode) {
 	}
 	return lora_write_reg(sx1278, RegOpMode, data);
 }
+/**
+  * @brief  sx1278 set frequency.
+  * @param  sx1278 lora device instance
+  * @param	f frequency
+  * @retval none
+  */
 void lora_set_frequency(struct lora_dev *sx1278, u32 f) {
 	u32_t Fr;
 	Fr.val = ((u32)f * 524288) >> 5;
@@ -71,6 +117,12 @@ void lora_set_frequency(struct lora_dev *sx1278, u32 f) {
 	lora_write_reg(sx1278, RegFrLsb, Fr.byte.byte_0);
 	HAL_Delay(5);
 }
+/**
+  * @brief  sx1278 set spreading factor.
+  * @param  sx1278 lora device instance
+  * @param	SF spreading factor
+  * @retval none
+  */
 void lora_set_spreading_factor(struct lora_dev *sx1278, SF_t SF) {
 	u8 data;
 	u8 read;
@@ -88,6 +140,12 @@ void lora_set_spreading_factor(struct lora_dev *sx1278, SF_t SF) {
 	HAL_Delay(10);
 	lora_setAutoLDO(sx1278);
 }
+/**
+  * @brief  sx1278 set power.
+  * @param  sx1278 lora device instance
+  * @param	power power
+  * @retval none
+  */
 void lora_set_power(struct lora_dev *sx1278, power_t power) {
 	lora_write_reg(sx1278, RegPaConfig, power);
 	HAL_Delay(10);
@@ -129,11 +187,22 @@ void lora_setAutoLDO(struct lora_dev *sx1278) {
 
 	lora_setLowDaraRateOptimization(sx1278, (long)((1 << sx1278->spreadingFactor) / ((double)BW[sx1278->bandWidth])) > 16.0);
 }
-
+/**
+  * @brief  sx1278 set sync word.
+  * @param  sx1278 lora device instance
+  * @param	syncword
+  * @retval none
+  */
 void lora_set_sync_word(struct lora_dev *sx1278, u8 syncword) {
 	lora_write_reg(sx1278, RegSyncWord, syncword);
 	HAL_Delay(10);
 }
+/**
+  * @brief  sx1278 set bandwidth.
+  * @param  sx1278 lora device instance
+  * @param	BW bandwidth
+  * @retval none
+  */
 void lora_set_bandwidth(struct lora_dev *sx1278, bandwidth_t BW) {
 	u8 data;
 	data = lora_read_reg(sx1278, RegModemConfig1);
@@ -142,6 +211,12 @@ void lora_set_bandwidth(struct lora_dev *sx1278, bandwidth_t BW) {
 	lora_write_reg(sx1278, RegModemConfig1, data);
 	lora_setAutoLDO(sx1278);
 }
+/**
+  * @brief  sx1278 set coding rate.
+  * @param  sx1278 lora device instance
+  * @param	cdRate coding rate
+  * @retval none
+  */
 void lora_set_coding_rate(struct lora_dev *sx1278, codingrate_t cdRate) {
 	u8 data;
 	data = lora_read_reg(sx1278, RegModemConfig1);
@@ -149,6 +224,14 @@ void lora_set_coding_rate(struct lora_dev *sx1278, codingrate_t cdRate) {
 	data |= (u8)(cdRate << 1);
 	lora_write_reg(sx1278, RegModemConfig1, data);
 }
+/**
+  * @brief  Write multiple data sx1278 register.
+  * @param  sx1278 lora device instance
+  * @param	address register address
+  * @param	value data to write
+  * @param	len data length
+  * @retval HAL status
+  */
 HAL_StatusTypeDef lora_burst_write(struct lora_dev *sx1278, u8 address, u8 *value, u32 len) {
 	HAL_StatusTypeDef res;
 	u8 *to_send = (u8 *)calloc(len + 1, sizeof(u8));
@@ -163,33 +246,58 @@ HAL_StatusTypeDef lora_burst_write(struct lora_dev *sx1278, u8 address, u8 *valu
 	free(to_send);
 	return res;
 }
+/**
+  * @brief  Check lora still working or not.
+  * @param  sx1278 lora device instance
+  * @retval LORA status
+  */
 status_t lora_is_valid(struct lora_dev *sx1278) {
 	if (lora_read_reg(sx1278, RegVersion) == LORA_VERSION)
 		return LORA_OK;
 	else
 		return LORA_NOT_FOUND;
 }
-u8 lora_transmit(struct lora_dev *sx1278, u8 *data, u8 length, u16 timeout) {
-	u8 read;
-	int mode = sx1278->current_mode;
+/**
+  * @brief  Channel Activity Detection checking.
+  * @param  sx1278 lora device instance
+  * @param	timeout time slice
+  * @retval HAL status
+  */
+HAL_StatusTypeDef lora_cad_check(struct lora_dev *sx1278, u32 timeout) {
+	lora_mode_t mode = sx1278->current_mode;
 	lora_goto_mode(sx1278, STANDBY_MODE);
 	HAL_Delay(1);
 	/* Channel Activity Detection */
-	while(1) {
-		lora_goto_mode(sx1278, CAD_MODE);
-		while(!(lora_read_reg(sx1278, RegIrqFlags)>>2 & 0x01)) {
-			HAL_Delay(1);
-		}
-		read = lora_read_reg(sx1278, RegIrqFlags);
-		/* CAD detected */
-		if(read & 0x01) {
-			lora_write_reg(sx1278, RegIrqFlags, 0xFF);
-		} else {
-			lora_write_reg(sx1278, RegIrqFlags, 0xFF);
-			break;
+	lora_goto_mode(sx1278, CAD_MODE);
+	while(!(lora_read_reg(sx1278, RegIrqFlags) & IRQ_CAD_DONE)) {
+		if (--timeout == 0) {
+			lora_goto_mode(sx1278, mode);
+			return HAL_TIMEOUT;
 		}
 		HAL_Delay(1);
 	}
+	lora_clear_irq(sx1278, IRQ_CAD_DONE);
+	/* CAD detected */
+	if(lora_read_reg(sx1278, RegIrqFlags) & IRQ_CAD_DETECTED) {
+		lora_clear_irq(sx1278, IRQ_CAD_DETECTED);
+		lora_goto_mode(sx1278, mode);
+		return HAL_BUSY;
+	}
+	lora_goto_mode(sx1278, mode);
+	return HAL_OK;
+}
+/**
+  * @brief  Sending lora data packet.
+  * @param  sx1278 lora device instance
+  * @param	data data to send
+  * @param	length data length
+  * @param	timeout time slice
+  * @retval HAL status
+  */
+HAL_StatusTypeDef lora_transmit(struct lora_dev *sx1278, u8 *data, u8 length, u16 timeout) {
+	u8 read;
+	lora_mode_t mode = sx1278->current_mode;
+	while (lora_cad_check(sx1278, timeout)!= HAL_OK); /* Wait until channel is idle */
 	/* send data */
 	lora_goto_mode(sx1278, STANDBY_MODE);
 	read = lora_read_reg(sx1278, RegFiFoTxBaseAddr);
@@ -198,32 +306,42 @@ u8 lora_transmit(struct lora_dev *sx1278, u8 *data, u8 length, u16 timeout) {
 	lora_burst_write(sx1278, RegFifo, data, length);
 	lora_goto_mode(sx1278, TRANSMIT_MODE);
 	while (1) {
-		read = lora_read_reg(sx1278, RegIrqFlags);
-		if (read & (1UL << 3)) {
-			lora_write_reg(sx1278, RegIrqFlags, 0xFF);
+		if (lora_read_reg(sx1278, RegIrqFlags) & IRQ_TX_DONE) {
+			lora_clear_irq(sx1278, IRQ_TX_DONE);
 			lora_goto_mode(sx1278, mode);
-			return 1;
+			return HAL_OK;
 		} else {
 			if (--timeout == 0) {
 				lora_goto_mode(sx1278, mode);
-				return 0;
+				return HAL_TIMEOUT;
 			}
 		}
 		HAL_Delay(1);
 	}
 }
+/**
+  * @brief  Switch to Receiving Mode.
+  * @param  sx1278 lora device instance
+  * @retval HAL status
+  */
 HAL_StatusTypeDef lora_start_receiving(struct lora_dev *sx1278) {
 	return lora_goto_mode(sx1278, RXCONTINUOUS_MODE);
 }
+/**
+  * @brief  Receive lora data packet.
+  * @param  sx1278 lora device instance
+  * @param	data buffer to get data
+  * @param	length data length
+  * @retval data length already received
+  */
 u8 lora_receive(struct lora_dev *sx1278, u8 *data, u8 length) {
 	u8 i = 0;
 	u8 read;
 	u8 data_len;
 	u8 min = 0;
 	lora_goto_mode(sx1278, STANDBY_MODE);
-	read = lora_read_reg(sx1278, RegIrqFlags);
-	if (read & (1UL << 6)) {
-		lora_write_reg(sx1278, RegIrqFlags, 0xFF);
+	if (lora_read_reg(sx1278, RegIrqFlags) & IRQ_RX_DONE) {
+		lora_clear_irq(sx1278, IRQ_RX_DONE);
 		data_len = lora_read_reg(sx1278, RegRxNbBytes);
 		read = lora_read_reg(sx1278, RegFiFoRxCurrentAddr);
 		lora_write_reg(sx1278, RegFiFoAddPtr, read);
@@ -234,11 +352,19 @@ u8 lora_receive(struct lora_dev *sx1278, u8 *data, u8 length) {
 	lora_start_receiving(sx1278);
 	return min;
 }
+/**
+  * @brief  Get LoRa RSSI Value of last packet.
+  * @param  sx1278 lora device instance
+  * @retval rssi value
+  */
 u8 lora_get_rssi(struct lora_dev *sx1278) {
-	u8 read;
-	read = lora_read_reg(sx1278, RegPktRssiValue);
-	return read;
+	return lora_read_reg(sx1278, RegPktRssiValue);
 }
+/**
+  * @brief  Lora initialize.
+  * @param  sx1278 lora device instance
+  * @retval lora error code
+  */
 lora_err_t lora_init(struct lora_dev *sx1278) {
 	u8 data;
 	u8 read;
@@ -322,7 +448,11 @@ lora_err_t lora_init(struct lora_dev *sx1278) {
 		return LORA_EFAULT;
 	}
 }
-
+/**
+  * @brief  Lora Rx callback function.
+  * @param  sx1278 lora device instance
+  * @retval data length
+  */
 u8 lora_rx_callback(struct lora_dev *sx1278) {
 	u8 size = 0;
 	if(__HAL_GPIO_EXTI_GET_IT(sx1278->dio0_pin) != RESET) {

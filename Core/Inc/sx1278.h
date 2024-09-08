@@ -36,6 +36,19 @@
 #define RegSyncWord                    	    0x39
 #define RegVersion							0x42
 
+/* IRQ Register */
+#define IRQ_CAD_DETECTED						(0x01 << 0)
+#define IRQ_FHSS_CHANGE_CHANNEL					(0x01 << 1)
+#define IRQ_CAD_DONE							(0x01 << 2)
+#define	IRQ_TX_DONE								(0x01 << 3)
+#define IRQ_VALID_HEADER						(0x01 << 4)
+#define IRQ_PAYLOAD_CRC_ERROR					(0x01 << 5)
+#define IRQ_RX_DONE								(0x01 << 6)
+#define	IRQ_RX_TIME_OUT							(0x01 << 7)
+
+/* Clear IRQ Flags */
+#define lora_clear_irq(sx1278, irq) lora_write_reg(sx1278, RegIrqFlags, irq)
+
 typedef enum {
 	SLEEP_MODE,
 	STANDBY_MODE,
@@ -155,7 +168,8 @@ void lora_set_bandwidth(struct lora_dev *sx1278, bandwidth_t BW);
 void lora_set_coding_rate(struct lora_dev *sx1278, codingrate_t cdRate);
 HAL_StatusTypeDef lora_burst_write(struct lora_dev *sx1278, u8 address, u8 *value, u32 len);
 status_t lora_is_valid(struct lora_dev *sx1278);
-u8 lora_transmit(struct lora_dev *sx1278, u8 *data, u8 length, u16 timeout);
+HAL_StatusTypeDef lora_cad_check(struct lora_dev *sx1278, u32 timeout);
+HAL_StatusTypeDef lora_transmit(struct lora_dev *sx1278, u8 *data, u8 length, u16 timeout);
 HAL_StatusTypeDef lora_start_receiving(struct lora_dev *sx1278);
 u8 lora_receive(struct lora_dev *sx1278, u8 *data, u8 length);
 u8 lora_get_rssi(struct lora_dev *sx1278);
