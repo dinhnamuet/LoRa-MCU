@@ -16,9 +16,7 @@ static HAL_StatusTypeDef spi_lora_write_then_read(struct lora_dev *sx1278, u8 *t
 	if (res != HAL_OK) {
 		goto end_of_transmit;
 	}
-	while (HAL_SPI_GetState(sx1278->spi) != HAL_SPI_STATE_READY);
 	res = HAL_SPI_Receive(sx1278->spi, rx_buf, rx_len, SPI_TIMEOUT);
-	while (HAL_SPI_GetState(sx1278->spi) != HAL_SPI_STATE_READY);
 end_of_transmit:
 	HAL_GPIO_WritePin(sx1278->cs_port, sx1278->cs_pin, GPIO_PIN_SET);
 	return res;
@@ -60,21 +58,17 @@ HAL_StatusTypeDef lora_goto_mode(struct lora_dev *sx1278, lora_mode_t mode) {
 	}
 	return lora_write_reg(sx1278, RegOpMode, data);
 }
-void lora_set_frequency(struct lora_dev *sx1278, int f) {
-	u8 data;
-	uint32_t Fr;
-	Fr = ((uint32_t)f * 524288) >> 5;
+void lora_set_frequency(struct lora_dev *sx1278, u32 f) {
+	u32_t Fr;
+	Fr.val = ((u32)f * 524288) >> 5;
 
-	data = (u8)(Fr >> 16) & 0xFF;
-	lora_write_reg(sx1278, RegFrMsb, data);
+	lora_write_reg(sx1278, RegFrMsb, Fr.byte.byte_2);
 	HAL_Delay(5);
 
-	data = (u8)(Fr >> 8) & 0xFF;
-	lora_write_reg(sx1278, RegFrMid, data);
+	lora_write_reg(sx1278, RegFrMid, Fr.byte.byte_1);
 	HAL_Delay(5);
 
-	data = (u8)Fr & 0xFF;
-	lora_write_reg(sx1278, RegFrLsb, data);
+	lora_write_reg(sx1278, RegFrLsb, Fr.byte.byte_0);
 	HAL_Delay(5);
 }
 void lora_set_spreading_factor(struct lora_dev *sx1278, SF_t SF) {
@@ -155,17 +149,19 @@ void lora_set_coding_rate(struct lora_dev *sx1278, codingrate_t cdRate) {
 	data |= (u8)(cdRate << 1);
 	lora_write_reg(sx1278, RegModemConfig1, data);
 }
-int lora_burst_write(struct lora_dev *sx1278, u8 address, u8 *value, u32 len) {
+HAL_StatusTypeDef lora_burst_write(struct lora_dev *sx1278, u8 address, u8 *value, u32 len) {
+	HAL_StatusTypeDef res;
 	u8 *to_send = (u8 *)calloc(len + 1, sizeof(u8));
 
 	if (!to_send) {
-		return -1;
+		return HAL_ERROR;
 	}
 
 	to_send[0] = address | (1 << 7);
 	memcpy(&to_send[1], value, len);
-	spi_lora_write(sx1278, to_send, len);
-	return 0;
+	res = spi_lora_write(sx1278, to_send, len);
+	free(to_send);
+	return res;
 }
 status_t lora_is_valid(struct lora_dev *sx1278) {
 	if (lora_read_reg(sx1278, RegVersion) == LORA_VERSION)
@@ -226,8 +222,7 @@ u8 lora_receive(struct lora_dev *sx1278, u8 *data, u8 length) {
 	u8 min = 0;
 	lora_goto_mode(sx1278, STANDBY_MODE);
 	read = lora_read_reg(sx1278, RegIrqFlags);
-	if (read & (1UL << 6))
-	{
+	if (read & (1UL << 6)) {
 		lora_write_reg(sx1278, RegIrqFlags, 0xFF);
 		data_len = lora_read_reg(sx1278, RegRxNbBytes);
 		read = lora_read_reg(sx1278, RegFiFoRxCurrentAddr);

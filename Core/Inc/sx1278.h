@@ -99,6 +99,16 @@ typedef enum {
 	POWER_20_DB = 0xFF
 } power_t; /* lora power gain */
 
+typedef union {
+	u32 val;
+	struct decode {
+		u8 byte_0;
+		u8 byte_1;
+		u8 byte_2;
+		u8 byte_3;
+	} byte;
+} u32_t;
+
 #pragma pack(1)
 
 struct lora_dev {
@@ -133,7 +143,7 @@ void lora_reset(struct lora_dev *sx1278);
 u8 lora_read_reg(struct lora_dev *sx1278, u8 address);
 HAL_StatusTypeDef lora_write_reg(struct lora_dev *sx1278, u8 address, u8 value);
 HAL_StatusTypeDef lora_goto_mode(struct lora_dev *sx1278, lora_mode_t mode);
-void lora_set_frequency(struct lora_dev *sx1278, int f);
+void lora_set_frequency(struct lora_dev *sx1278, u32 f);
 void lora_set_spreading_factor(struct lora_dev *sx1278, SF_t SF);
 void lora_set_power(struct lora_dev *sx1278, power_t power);
 void lora_set_ocp(struct lora_dev *sx1278, u8 cur);
@@ -143,7 +153,7 @@ void lora_setAutoLDO(struct lora_dev *sx1278);
 void lora_set_sync_word(struct lora_dev *sx1278, u8 syncword);
 void lora_set_bandwidth(struct lora_dev *sx1278, bandwidth_t BW);
 void lora_set_coding_rate(struct lora_dev *sx1278, codingrate_t cdRate);
-int lora_burst_write(struct lora_dev *sx1278, u8 address, u8 *value, u32 len);
+HAL_StatusTypeDef lora_burst_write(struct lora_dev *sx1278, u8 address, u8 *value, u32 len);
 status_t lora_is_valid(struct lora_dev *sx1278);
 u8 lora_transmit(struct lora_dev *sx1278, u8 *data, u8 length, u16 timeout);
 HAL_StatusTypeDef lora_start_receiving(struct lora_dev *sx1278);

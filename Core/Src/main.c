@@ -57,7 +57,6 @@ SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
 struct lora_dev sx1278;
-u8 arr[RX_MAX_SIZE];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -145,8 +144,6 @@ int main(void)
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
-		lora_receive(&sx1278, arr, sizeof(arr));
-		HAL_Delay(500);
 	}
 	/* USER CODE END 3 */
 }
