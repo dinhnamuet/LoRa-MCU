@@ -235,14 +235,11 @@ void lora_set_coding_rate(struct lora_dev *sx1278, codingrate_t cdRate) {
 HAL_StatusTypeDef lora_burst_write(struct lora_dev *sx1278, u8 address, u8 *value, u32 len) {
 	HAL_StatusTypeDef res;
 	u8 *to_send = (u8 *)calloc(len + 1, sizeof(u8));
-
-	if (!to_send) {
+	if (!to_send)
 		return HAL_ERROR;
-	}
-
 	to_send[0] = address | (1 << 7);
 	memcpy(&to_send[1], value, len);
-	res = spi_lora_write(sx1278, to_send, len);
+	res = spi_lora_write(sx1278, to_send, len + 1);
 	free(to_send);
 	return res;
 }
@@ -264,27 +261,23 @@ status_t lora_is_valid(struct lora_dev *sx1278) {
   * @retval HAL status
   */
 HAL_StatusTypeDef lora_cad_check(struct lora_dev *sx1278, u32 timeout) {
-	lora_mode_t mode = sx1278->current_mode;
 	lora_goto_mode(sx1278, STANDBY_MODE);
-	HAL_Delay(1);
+	HAL_Delay(5);
 	/* Channel Activity Detection */
 	lora_goto_mode(sx1278, CAD_MODE);
 	while(!(lora_read_reg(sx1278, RegIrqFlags) & IRQ_CAD_DONE)) {
-		if (--timeout == 0) {
-			lora_goto_mode(sx1278, mode);
-			return HAL_TIMEOUT;
-		}
+		if (--timeout == 0)
+			return HAL_TIMEOUT; /* Cannot go to CAD Mode */
 		HAL_Delay(1);
 	}
-	lora_clear_irq(sx1278, IRQ_CAD_DONE);
 	/* CAD detected */
 	if(lora_read_reg(sx1278, RegIrqFlags) & IRQ_CAD_DETECTED) {
-		lora_clear_irq(sx1278, IRQ_CAD_DETECTED);
-		lora_goto_mode(sx1278, mode);
-		return HAL_BUSY;
+		lora_clear_irq(sx1278, IRQ_CAD_DETECTED | IRQ_CAD_DONE);
+		return HAL_BUSY; /* Channel is busy */
+	} else {
+		lora_clear_irq(sx1278, IRQ_CAD_DONE);
+		return HAL_OK; /* Channel is idle */
 	}
-	lora_goto_mode(sx1278, mode);
-	return HAL_OK;
 }
 /**
   * @brief  Sending lora data packet.
@@ -297,7 +290,7 @@ HAL_StatusTypeDef lora_cad_check(struct lora_dev *sx1278, u32 timeout) {
 HAL_StatusTypeDef lora_transmit(struct lora_dev *sx1278, u8 *data, u8 length, u16 timeout) {
 	u8 read;
 	lora_mode_t mode = sx1278->current_mode;
-	while (lora_cad_check(sx1278, timeout)!= HAL_OK); /* Wait until channel is idle */
+	while (lora_cad_check(sx1278, timeout) != HAL_OK); /* Wait until channel is idle */
 	/* send data */
 	lora_goto_mode(sx1278, STANDBY_MODE);
 	read = lora_read_reg(sx1278, RegFiFoTxBaseAddr);
@@ -367,7 +360,6 @@ u8 lora_get_rssi(struct lora_dev *sx1278) {
   */
 lora_err_t lora_init(struct lora_dev *sx1278) {
 	u8 data;
-	u8 read;
 
 	NVIC_DisableIRQ(sx1278->dio0_irq_number);
 
@@ -387,10 +379,7 @@ lora_err_t lora_init(struct lora_dev *sx1278) {
 		HAL_Delay(10);
 
 		// turn on lora mode:
-		read = lora_read_reg(sx1278, RegOpMode);
-		HAL_Delay(10);
-
-		data = read | 0x80;
+		data = lora_read_reg(sx1278, RegOpMode) | 0x80;
 		lora_write_reg(sx1278, RegOpMode, data);
 		HAL_Delay(100);
 
@@ -416,8 +405,7 @@ lora_err_t lora_init(struct lora_dev *sx1278) {
 		// set bandwidth, coding rate and expilicit mode:
 		// 8 bit RegModemConfig --> | X | X | X | X | X | X | X | X |
 		//       bits represent --> |   bandwidth   |     CR    |I/E|
-		data = lora_read_reg(sx1278, RegModemConfig1);
-		data &= 0x01;
+		data = lora_read_reg(sx1278, RegModemConfig1) & 0x01;
 		data |= (u8)((sx1278->bandWidth << 4) | (sx1278->codingRate << 1));
 		lora_write_reg(sx1278, RegModemConfig1, data);
 		lora_setAutoLDO(sx1278);
@@ -427,16 +415,14 @@ lora_err_t lora_init(struct lora_dev *sx1278) {
 		lora_write_reg(sx1278, RegPreambleLsb, (u8)sx1278->preamble);
 
 		// DIO mapping:   --> DIO: RxDone
-		read = lora_read_reg(sx1278, RegDioMapping1);
-		data = read | 0x3F;
+		data = lora_read_reg(sx1278, RegDioMapping1) | 0x3F;
 		lora_write_reg(sx1278, RegDioMapping1, data);
 
 		// goto standby mode:
 		lora_goto_mode(sx1278, STANDBY_MODE);
 		HAL_Delay(10);
 
-		read = lora_read_reg(sx1278, RegVersion);
-		if (read == LORA_VERSION) {
+		if (lora_read_reg(sx1278, RegVersion) == LORA_VERSION) {
 			NVIC_EnableIRQ(sx1278->dio0_irq_number);
 			return LORA_SUCCESS;
 		} else {
