@@ -1,3 +1,7 @@
+/*
+ *  LoRa Ra-02 sx1278 interfacing
+ *  author: dinhnamuet
+ */
 #ifndef __SX1278_H__
 #define __SX1278_H__
 
@@ -172,7 +176,7 @@ HAL_StatusTypeDef lora_cad_check(struct lora_dev *sx1278, u32 timeout);
 HAL_StatusTypeDef lora_transmit(struct lora_dev *sx1278, u8 *data, u8 length, u16 timeout);
 HAL_StatusTypeDef lora_start_receiving(struct lora_dev *sx1278);
 u8 lora_receive(struct lora_dev *sx1278, u8 *data, u8 length);
-u8 lora_get_rssi(struct lora_dev *sx1278);
+int lora_get_rssi(struct lora_dev *sx1278);
 lora_err_t lora_init(struct lora_dev *sx1278);
 u8 lora_rx_callback(struct lora_dev *sx1278);
 

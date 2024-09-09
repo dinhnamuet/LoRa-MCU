@@ -292,7 +292,7 @@ HAL_StatusTypeDef lora_transmit(struct lora_dev *sx1278, u8 *data, u8 length, u1
 	lora_mode_t mode = sx1278->current_mode;
 	while (lora_cad_check(sx1278, timeout) != HAL_OK); /* Wait until channel is idle */
 	/* send data */
-	lora_goto_mode(sx1278, STANDBY_MODE);
+//	lora_goto_mode(sx1278, STANDBY_MODE); /* After CAD, Automatic Mode change Standby Mode */
 	read = lora_read_reg(sx1278, RegFiFoTxBaseAddr);
 	lora_write_reg(sx1278, RegFiFoAddPtr, read);
 	lora_write_reg(sx1278, RegPayloadLength, length);
@@ -350,8 +350,8 @@ u8 lora_receive(struct lora_dev *sx1278, u8 *data, u8 length) {
   * @param  sx1278 lora device instance
   * @retval rssi value
   */
-u8 lora_get_rssi(struct lora_dev *sx1278) {
-	return lora_read_reg(sx1278, RegPktRssiValue);
+int lora_get_rssi(struct lora_dev *sx1278) {
+	return lora_read_reg(sx1278, RegPktRssiValue) - 164;
 }
 /**
   * @brief  Lora initialize.
