@@ -126,8 +126,6 @@ typedef union {
 	} byte;
 } u32_t;
 
-#pragma pack(1)
-
 struct lora_dev {
 	/* LoRa Feature */
 	u32 frequency;
@@ -152,9 +150,11 @@ struct lora_dev {
 	u8 *rx_buf;
 	u32 rx_buf_size;
 	void (*receive_buf)(struct lora_dev *sx1278, u8 *buf, u32 size);
-};
 
-#pragma pack()
+	/* Linker List */
+	struct lora_dev *previous;
+	struct lora_dev *next;
+} __attribute__((packed));
 
 void lora_reset(struct lora_dev *sx1278);
 u8 lora_read_reg(struct lora_dev *sx1278, u8 address);
@@ -178,6 +178,7 @@ HAL_StatusTypeDef lora_start_receiving(struct lora_dev *sx1278);
 u8 lora_receive(struct lora_dev *sx1278, u8 *data, u8 length);
 int lora_get_rssi(struct lora_dev *sx1278);
 lora_err_t lora_init(struct lora_dev *sx1278);
+void lora_deinit(struct lora_dev *sx1278);
 u8 lora_rx_callback(struct lora_dev *sx1278);
 
 #endif

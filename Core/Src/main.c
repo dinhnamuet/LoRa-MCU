@@ -108,25 +108,25 @@ int main(void)
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
 
-	sx1278.frequency					= 433;
+	sx1278.frequency					    = 433;
 	sx1278.spreadingFactor				= SF_7;
-	sx1278.bandWidth					= BW_125_KHZ;
-	sx1278.codingRate					= CR_4_5;
-	sx1278.power						= POWER_17_DB;
-	sx1278.overCurrentProtection		= 100;
-	sx1278.preamble						= 8;
+	sx1278.bandWidth					    = BW_125_KHZ;
+	sx1278.codingRate					    = CR_4_5;
+	sx1278.power					  	    = POWER_17_DB;
+	sx1278.overCurrentProtection	= 100;
+	sx1278.preamble						    = 8;
 
-	sx1278.cs_port  					= GPIOA;
-	sx1278.cs_pin   					= GPIO_PIN_4;
-	sx1278.rst_port 					= GPIOA;
-	sx1278.rst_pin  					= GPIO_PIN_3;
-	sx1278.spi      					= &hspi1;
-	sx1278.dio0_pin						= GPIO_PIN_2;
+	sx1278.cs_port  				  	  = GPIOA;
+	sx1278.cs_pin   					    = GPIO_PIN_4;
+	sx1278.rst_port 					    = GPIOA;
+	sx1278.rst_pin  					    = GPIO_PIN_3;
+	sx1278.spi      					    = &hspi1;
+	sx1278.dio0_pin						    = GPIO_PIN_2;
 	sx1278.dio0_irq_number				= EXTI2_IRQn;
 
-	sx1278.rx_buf						= NULL;
-	sx1278.rx_buf_size					= RX_MAX_SIZE;
-	sx1278.receive_buf 					= lora_get_data;
+	sx1278.rx_buf						      = NULL;
+	sx1278.rx_buf_size					  = RX_MAX_SIZE;
+	sx1278.receive_buf 					  = lora_get_data;
 
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET);
 	HAL_Delay(2000);

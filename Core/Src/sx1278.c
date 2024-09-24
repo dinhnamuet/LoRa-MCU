@@ -2,6 +2,60 @@
 #include <string.h>
 #include <stdlib.h>
 
+static struct lora_dev *lora_head = NULL;
+/**
+  * @brief  Add a lora module into linker list
+  * @param  sx1278 lora device instance
+  * @retval -1: failed, 0: success
+  */
+static inline int lora_register(struct lora_dev *sx1278) {
+    struct lora_dev *foo;
+
+    if (!sx1278)
+        return -1;
+
+	if (!lora_head) {
+        /* Init list head */
+        lora_head = sx1278;
+        lora_head->previous = NULL;
+        lora_head->next = NULL;
+    } else {
+        foo = lora_head;
+        while (foo->next) {
+            foo = foo->next;
+        }
+        foo->next = sx1278;
+        sx1278->previous = foo;
+        sx1278->next = NULL;
+    }
+    return 0;
+}
+/**
+  * @brief  Remove a lora module in linker list
+  * @param  sx1278 lora device instance
+  * @retval -1: failed, 0: success
+  */
+static inline int lora_delete(struct lora_dev *sx1278) {
+    if (!sx1278)
+		return -1;
+	__disable_irq();
+    if (sx1278 == lora_head) {
+        lora_head = sx1278->next;
+        if (lora_head)
+			lora_head->previous = NULL;
+    } else {
+        if (sx1278->previous) {
+            sx1278->previous->next = sx1278->next;
+        }
+        if (sx1278->next) {
+            sx1278->next->previous = sx1278->previous;
+        }
+    }
+	__enable_irq();
+    lora_deinit(sx1278);
+    return 0;
+}
+
 /**
   * @brief  Transmit an amount of data in blocking mode.
   * @param  sx1278 lora device instance
@@ -354,6 +408,42 @@ int lora_get_rssi(struct lora_dev *sx1278) {
 	return lora_read_reg(sx1278, RegPktRssiValue) - 164;
 }
 /**
+  * @brief  Lora deinitialize.
+  * @param  sx1278 lora device instance
+  * @retval none
+  */
+void lora_deinit(struct lora_dev *sx1278) {
+	lora_goto_mode(sx1278, SLEEP_MODE);
+	HAL_SPI_DeInit(sx1278->spi);
+	HAL_NVIC_DisableIRQ(sx1278->dio0_irq_number);
+	HAL_GPIO_DeInit(sx1278->cs_port, sx1278->cs_pin);
+	HAL_GPIO_DeInit(sx1278->rst_port, sx1278->rst_pin);
+	free(sx1278->rx_buf);
+}
+/*
+* Brief: LoRa Interrupt Service Rountine
+*/
+static void lora_irq_handle(void) {
+	u8 size;
+	struct lora_dev *foo = lora_head;
+
+	while (foo) {
+		if (__HAL_GPIO_EXTI_GET_IT(foo->dio0_pin) != RESET) {
+			__HAL_GPIO_EXTI_CLEAR_IT(foo->dio0_pin);
+			if (foo->rx_buf) {
+				memset(foo->rx_buf, 0, foo->rx_buf_size);
+				size = lora_receive(foo, foo->rx_buf, foo->rx_buf_size);
+				if (size && foo->receive_buf) {
+					foo->receive_buf(foo, foo->rx_buf, size);
+				}
+			}
+			return;
+		} else {
+			foo = foo->next;
+		}
+	}
+}
+/**
   * @brief  Lora initialize.
   * @param  sx1278 lora device instance
   * @retval lora error code
@@ -362,6 +452,7 @@ lora_err_t lora_init(struct lora_dev *sx1278) {
 	u8 data;
 
 	NVIC_DisableIRQ(sx1278->dio0_irq_number);
+	NVIC_SetVector(sx1278->dio0_irq_number, lora_irq_handle);
 
 	HAL_GPIO_WritePin(sx1278->rst_port, sx1278->rst_pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(sx1278->cs_port, sx1278->cs_pin, GPIO_PIN_SET);
@@ -424,6 +515,7 @@ lora_err_t lora_init(struct lora_dev *sx1278) {
 
 		if (lora_read_reg(sx1278, RegVersion) == LORA_VERSION) {
 			NVIC_EnableIRQ(sx1278->dio0_irq_number);
+			lora_register(sx1278);
 			return LORA_SUCCESS;
 		} else {
 			free(sx1278->rx_buf);
@@ -433,23 +525,4 @@ lora_err_t lora_init(struct lora_dev *sx1278) {
 		free(sx1278->rx_buf);
 		return LORA_EFAULT;
 	}
-}
-/**
-  * @brief  Lora Rx callback function.
-  * @param  sx1278 lora device instance
-  * @retval data length
-  */
-u8 lora_rx_callback(struct lora_dev *sx1278) {
-	u8 size = 0;
-	if(__HAL_GPIO_EXTI_GET_IT(sx1278->dio0_pin) != RESET) {
-		__HAL_GPIO_EXTI_CLEAR_IT(sx1278->dio0_pin);
-		if (sx1278->rx_buf) {
-			memset(sx1278->rx_buf, 0, sx1278->rx_buf_size);
-			size = lora_receive(sx1278, sx1278->rx_buf, sx1278->rx_buf_size);
-			if (size && sx1278->receive_buf) {
-				sx1278->receive_buf(sx1278, sx1278->rx_buf, size);
-			}
-		}
-	}
-	return size;
 }
